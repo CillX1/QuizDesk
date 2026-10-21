@@ -1,0 +1,56 @@
+{
+  "name": "quizdesk",
+  "productName": "QuizDesk",
+  "version": "1.0.0",
+  "description": "All your study quizzes in one app, offline, plus quizzes shared by others.",
+  "author": "CillX1 <291351647+CillX1@users.noreply.github.com>",
+  "homepage": "https://github.com/CillX1/QuizDesk",
+  "license": "GPL-3.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win --x64 --publish never",
+    "dist:mac": "electron-builder --mac --x64 --arm64 --publish never",
+    "dist:linux": "electron-builder --linux --x64 --publish never"
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "io.github.cillx1.quizdesk",
+    "productName": "QuizDesk",
+    "files": ["main.js", "preload.js", "renderer/**", "package.json"],
+    "extraResources": [
+      { "from": "quizzes", "to": "quizzes" },
+      { "from": "build/icon.png", "to": "icon.png" }
+    ],
+    "directories": { "output": "dist", "buildResources": "build" },
+    "artifactName": "QuizDesk-${version}-${os}-${arch}.${ext}",
+    "win": { "target": "nsis", "icon": "build/icon.png" },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "QuizDesk"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.education",
+      "icon": "build/icon.png",
+      "identity": null,
+      "darkModeSupport": true
+    },
+    "afterPack": "./build/adhoc-sign.js",
+    "dmg": { "title": "QuizDesk" },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Education",
+      "icon": "build/icon.png",
+      "maintainer": "CillX1 <291351647+CillX1@users.noreply.github.com>",
+      "synopsis": "Study quizzes, offline"
+    },
+    "deb": { "depends": ["libnotify4", "libxtst6", "libnss3"] }
+  }
+}

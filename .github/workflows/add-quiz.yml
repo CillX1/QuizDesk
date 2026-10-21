@@ -1,0 +1,62 @@
+name: Add approved quiz
+
+# When the repo owner puts the label "freigegeben" on a "Quiz einreichen" issue,
+# the attached quiz is added to quizzes/ and shows up in everyone's app under "Entdecken".
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency: add-quiz
+
+jobs:
+  add:
+    if: github.event.label.name == 'freigegeben' && contains(github.event.issue.labels.*.name, 'quiz')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Add quiz to the catalog
+        id: add
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_USER: ${{ github.event.issue.user.login }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: node scripts/add-quiz.mjs
+
+      - name: Commit
+        env:
+          QUIZ_TITLE: ${{ steps.add.outputs.title }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add quizzes
+          git commit -m "Add quiz: $QUIZ_TITLE (#$ISSUE_NUMBER)"
+          git push
+
+      - name: Thank and close
+        env:
+          GH_TOKEN: ${{ github.token }}
+          QUIZ_TITLE: ${{ steps.add.outputs.title }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh issue close "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --comment "Danke! „$QUIZ_TITLE“ ist jetzt in QuizDesk unter **Entdecken** zum Herunterladen bereit."
+
+      - name: Report a problem
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          msg="Das Quiz konnte nicht hinzugefügt werden."
+          [ -f add-quiz-error.txt ] && msg="$msg $(cat add-quiz-error.txt)"
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "$msg Bitte korrigiere die Einreichung (Issue bearbeiten), dann wird es nochmal versucht."
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label freigegeben

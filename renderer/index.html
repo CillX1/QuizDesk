@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:">
+<title>QuizDesk</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><rect x="6" y="14" width="52" height="40" rx="6" class="logo-card"/><rect x="6" y="6" width="22" height="12" rx="4" class="logo-tab"/><path d="M18 30h28M18 40h18" class="logo-line"/></svg>
+      <h1>QuizDesk</h1>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" id="tab-mine" aria-selected="true">Meine Quizze <span class="n" id="n-mine"></span></button>
+      <button role="tab" id="tab-find" aria-selected="false">Entdecken</button>
+    </nav>
+    <button class="btn" id="btn-import" type="button">+ Quiz aus Datei</button>
+  </header>
+
+  <section id="view-mine">
+    <div class="bar">
+      <input class="search" id="q" type="search" placeholder="Quiz suchen…" aria-label="Quiz suchen">
+      <div class="chips" id="chips" role="group" aria-label="Nach Fach filtern"></div>
+    </div>
+    <p class="note" id="mine-note">Diese Quizze sind auf deinem Computer gespeichert und funktionieren auch ohne Internet.</p>
+    <div class="grid" id="grid-mine"></div>
+  </section>
+
+  <section id="view-find" hidden>
+    <div class="bar">
+      <p class="net" id="net"><span class="dot"></span><span id="net-text">Verbinde…</span></p>
+      <button class="btn" id="btn-refresh" type="button">Aktualisieren</button>
+    </div>
+    <div class="grid" id="grid-find"></div>
+    <aside class="share">
+      <h2>Eigenes Quiz teilen</h2>
+      <p>Füge dein Quiz mit <b>+ Quiz aus Datei</b> hinzu und klicke bei der Karte auf <b>Einreichen</b>. QuizDesk speichert eine Kopie in deinen Downloads und öffnet ein Formular auf GitHub. Dort ziehst du die Datei hinein und schickst es ab. Sobald es freigegeben ist, erscheint es hier für alle.</p>
+      <button class="link" id="btn-repo" type="button">QuizDesk auf GitHub</button>
+    </aside>
+  </section>
+</div>
+
+<dialog id="dlg-meta">
+  <form method="dialog" id="form-meta" autocomplete="off">
+    <h2 id="meta-heading">Quiz hinzufügen</h2>
+    <label>Titel<input id="m-title" required maxlength="80"></label>
+    <label>Fach
+      <select id="m-tone">
+        <option value="mathe">Mathe</option>
+        <option value="netz">Netzwerk / Telematik</option>
+        <option value="sql">Datenbanken / SQL</option>
+        <option value="web">Web / Programmieren</option>
+        <option value="sprache">Sprachen</option>
+        <option value="other">Anderes</option>
+      </select>
+    </label>
+    <label>Reiter-Text <small>z. B. Modulnummer</small><input id="m-tag" maxlength="24" placeholder="M162"></label>
+    <label>Kurzbeschreibung<input id="m-desc" maxlength="200" placeholder="Worum geht es?"></label>
+    <p class="err" id="m-err" role="alert"></p>
+    <div class="dlg-actions">
+      <button class="btn" value="cancel" type="button" id="m-cancel">Abbrechen</button>
+      <button class="btn primary" type="submit" id="m-ok">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlg-submit">
+  <h2>Fast geschafft</h2>
+  <ol class="steps">
+    <li>Eine Kopie deines Quiz liegt jetzt in deinen Downloads: <code id="s-file"></code></li>
+    <li>In deinem Browser ist das GitHub-Formular offen. Melde dich bei GitHub an, falls nötig.</li>
+    <li>Zieh die Datei in das Feld <b>Quiz-Datei</b> und klicke auf <b>Create</b>.</li>
+  </ol>
+  <p class="note">Nach der Freigabe erscheint dein Quiz für alle unter <b>Entdecken</b>.</p>
+  <div class="dlg-actions"><button class="btn primary" type="button" id="s-ok">OK</button></div>
+</dialog>
+
+<div class="toast" id="toast" role="status" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>

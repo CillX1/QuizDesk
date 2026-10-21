@@ -1,0 +1,75 @@
+name: Build installers
+
+# Every push to main builds all installers (downloadable from the run's page);
+# pushing a tag like v1.0.0 also publishes them as a GitHub release.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+    paths-ignore: ['quizzes/**', '.github/ISSUE_TEMPLATE/**', '.github/workflows/add-quiz.yml', 'scripts/**', 'README.md']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: win
+          - os: macos-latest
+            target: mac
+          - os: ubuntu-latest
+            target: linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Set version
+        if: github.ref_type == 'tag'
+        shell: bash
+        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
+
+      - name: Install
+        run: npm install --no-audit --no-fund
+
+      # Spotlight indexing on the macOS runners keeps the new disk image busy, which breaks the .dmg step.
+      - name: Turn off Spotlight indexing
+        if: matrix.target == 'mac'
+        run: sudo mdutil -a -i off || true
+
+      - name: Build
+        shell: bash
+        run: |
+          for i in 1 2 3; do
+            npm run dist:${{ matrix.target }} && exit 0
+            echo "Build failed (attempt $i), retrying..."; sleep 10
+          done
+          exit 1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: |
+            dist/*.exe
+            dist/*.dmg
+            dist/*.AppImage
+            dist/*.deb
+
+      - name: Publish to the GitHub release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/*.exe
+            dist/*.dmg
+            dist/*.AppImage
+            dist/*.deb

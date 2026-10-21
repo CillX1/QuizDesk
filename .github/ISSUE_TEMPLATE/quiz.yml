@@ -1,0 +1,55 @@
+name: Quiz einreichen
+description: Teile dein Quiz, damit alle es in QuizDesk herunterladen können.
+title: "Quiz: "
+labels: ["quiz"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Danke fürs Teilen! Nach der Freigabe erscheint dein Quiz in QuizDesk unter **Entdecken**.
+        Am einfachsten geht es direkt aus der App: Karte → **Einreichen**.
+  - type: input
+    id: titel
+    attributes:
+      label: Titel
+      placeholder: z. B. SQL-Abfragen-Quiz
+    validations:
+      required: true
+  - type: dropdown
+    id: fach
+    attributes:
+      label: Fach
+      options:
+        - Mathe
+        - Netzwerk / Telematik
+        - Datenbanken / SQL
+        - Web / Programmieren
+        - Sprachen
+        - Anderes
+    validations:
+      required: true
+  - type: input
+    id: reiter
+    attributes:
+      label: Reiter-Text
+      description: Kurzer Text auf dem Karten-Reiter, z. B. die Modulnummer.
+      placeholder: M162
+  - type: input
+    id: beschreibung
+    attributes:
+      label: Kurzbeschreibung
+      placeholder: Worum geht es?
+  - type: textarea
+    id: datei
+    attributes:
+      label: Quiz-Datei
+      description: Zieh deine Datei (.quiz.txt aus QuizDesk; eine .html-Datei vorher in .txt umbenennen) in dieses Feld.
+    validations:
+      required: true
+  - type: checkboxes
+    id: ok
+    attributes:
+      label: Bestätigung
+      options:
+        - label: Ich habe das Quiz selbst erstellt oder darf es teilen, und es enthält keine persönlichen Daten.
+          required: true

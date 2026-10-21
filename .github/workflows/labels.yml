@@ -1,0 +1,21 @@
+name: Set up labels
+
+# Creates the labels the quiz submission flow uses: "quiz" (set by the form) and "freigegeben" (set by the owner to approve).
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/labels.yml']
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  labels:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create quiz --repo "$GITHUB_REPOSITORY" --color 2C55C9 --description "Eingereichtes Quiz" --force
+          gh label create freigegeben --repo "$GITHUB_REPOSITORY" --color 1F7A45 --description "Quiz geprüft: wird automatisch hinzugefügt" --force
