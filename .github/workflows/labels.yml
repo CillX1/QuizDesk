@@ -1,6 +1,6 @@
 name: Set up labels
 
-# Creates the labels the quiz submission flow uses: "quiz" (set by the form) and "freigegeben" (set by the owner to approve).
+# Runs once when this file changes. Creates the labels the quiz submission flow uses: "quiz" (set by the form) and "freigegeben" (set by the owner to approve).
 on:
   push:
     branches: [main]

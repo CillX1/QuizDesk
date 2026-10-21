@@ -6,7 +6,7 @@ on:
   push:
     branches: [main]
     tags: ['v*']
-    paths-ignore: ['quizzes/**', '.github/ISSUE_TEMPLATE/**', '.github/workflows/add-quiz.yml', 'scripts/**', 'README.md']
+    paths-ignore: ['quizzes/**', '.github/ISSUE_TEMPLATE/**', '.github/workflows/add-quiz.yml', '.github/workflows/labels.yml', 'scripts/**', 'README.md']
   workflow_dispatch:
 
 permissions:
