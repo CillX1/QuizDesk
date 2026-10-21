@@ -12,7 +12,6 @@ Alle deine Lernquizze in einer App. Quizze werden auf deinem Computer gespeicher
 - **Bleibt aktuell:** QuizDesk meldet, wenn eine neue Version da ist.
 - **Sicher:** Jedes Quiz läuft in einem eigenen, abgeschotteten Fenster.
 - **Für Windows, macOS und Linux**, kostenlos und Open Source (GPL-3.0).
-- **Auch in [Questrig](https://github.com/CillX1/Questrig):** Ab Questrig 2.0 (früher GameDesk) ist QuizDesk als Widget *Quizzes* eingebaut, mit derselben Sammlung. Duelle und Herausforderungs-Codes funktionieren zwischen beiden Apps.
 
 ## Die Quizze
 
