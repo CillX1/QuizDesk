@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://0.peerjs.com wss://0.peerjs.com">
 <title>QuizDesk</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500&display=swap">
 <link rel="stylesheet" href="style.css">
@@ -18,9 +18,14 @@
     <nav class="tabs" role="tablist">
       <button role="tab" id="tab-mine" aria-selected="true">Meine Quizze <span class="n" id="n-mine"></span></button>
       <button role="tab" id="tab-find" aria-selected="false">Entdecken</button>
+      <button role="tab" id="tab-duel" aria-selected="false">Duell</button>
     </nav>
     <button class="btn" id="btn-import" type="button">+ Quiz aus Datei</button>
   </header>
+  <div class="update" id="update" hidden>
+    <span id="update-text"></span>
+    <button class="btn primary small-solid" id="btn-update" type="button">Herunterladen</button>
+  </div>
 
   <section id="view-mine">
     <div class="bar">
@@ -43,7 +48,83 @@
       <button class="link" id="btn-repo" type="button">QuizDesk auf GitHub</button>
     </aside>
   </section>
+
+  <section id="view-duel" hidden>
+    <div class="duel-setup">
+      <label>Dein Name<input id="d-name" maxlength="20" placeholder="z. B. Marco" autocomplete="off"></label>
+      <label>Quiz<select id="d-quiz"></select></label>
+      <label>Fragen<select id="d-n"><option>5</option><option selected>10</option><option>15</option><option>20</option></select></label>
+      <label>Zeit pro Frage<select id="d-time"><option value="15">15 s</option><option value="20" selected>20 s</option><option value="30">30 s</option><option value="45">45 s</option></select></label>
+    </div>
+    <p class="note" id="d-none" hidden>Lade unter „Entdecken“ ein Quiz mit Duell-Fragen herunter, um ein Duell zu starten.</p>
+    <div class="duel-grid">
+      <article class="panel">
+        <h2>Live-Duell</h2>
+        <p>Ihr spielt gleichzeitig über das Internet: gleiche Fragen, gleiche Zeit. Richtig und schnell gibt am meisten Punkte.</p>
+        <div id="live-idle" class="stack">
+          <button class="btn primary" id="btn-host" type="button">Duell erstellen</button>
+          <div class="or">oder einem Duell beitreten</div>
+          <div class="row">
+            <input id="d-code" class="code-input" maxlength="5" placeholder="CODE" aria-label="Duell-Code" autocomplete="off">
+            <button class="btn" id="btn-join" type="button">Beitreten</button>
+          </div>
+        </div>
+        <div id="live-lobby" class="stack" hidden>
+          <p class="lobby-label">Dein Duell-Code</p>
+          <p class="big-code" id="lobby-code"></p>
+          <p class="lobby-status" id="lobby-status"></p>
+          <div class="row">
+            <button class="btn" id="btn-copy-code" type="button">Code kopieren</button>
+            <button class="btn primary" id="btn-start" type="button" hidden>Duell starten</button>
+            <button class="btn small" id="btn-leave" type="button">Abbrechen</button>
+          </div>
+        </div>
+        <p class="err" id="live-err" role="alert"></p>
+      </article>
+      <article class="panel">
+        <h2>Herausforderung</h2>
+        <p>Spiel eine Runde allein und schick den Code jemandem. Er bekommt genau dieselben Fragen und versucht, deine Punkte zu schlagen.</p>
+        <div class="stack">
+          <button class="btn primary" id="btn-solo" type="button">Runde spielen</button>
+          <div class="or">oder eine Herausforderung annehmen</div>
+          <div class="row">
+            <input id="d-chal" placeholder="QD-…" aria-label="Herausforderungs-Code" autocomplete="off">
+            <button class="btn" id="btn-accept" type="button">Annehmen</button>
+          </div>
+        </div>
+        <p class="err" id="chal-err" role="alert"></p>
+      </article>
+    </div>
+  </section>
 </div>
+
+<section id="game" class="game" hidden>
+  <div class="game-inner">
+    <div class="players">
+      <div class="player me"><span class="pname" id="g-me-name"></span><span class="pscore" id="g-me-score">0</span></div>
+      <div class="vs" id="g-progress"></div>
+      <div class="player opp"><span class="pname" id="g-opp-name"></span><span class="pscore" id="g-opp-score">0</span></div>
+    </div>
+    <div class="timer"><i id="g-timer"></i></div>
+    <div id="g-play">
+      <p class="topic" id="g-topic"></p>
+      <h2 class="question" id="g-q"></h2>
+      <pre class="code" id="g-code" hidden></pre>
+      <div class="answers" id="g-answers"></div>
+      <p class="gstatus" id="g-status" role="status"></p>
+    </div>
+    <div id="g-end" class="end" hidden>
+      <p class="end-title" id="g-end-title"></p>
+      <p class="end-score" id="g-end-score"></p>
+      <div class="share" id="g-share" hidden>
+        <p>Dein Herausforderungs-Code:</p>
+        <code class="chal-code" id="g-chal-code"></code>
+      </div>
+      <div class="row center" id="g-end-actions"></div>
+    </div>
+    <button class="btn small quit" id="g-quit" type="button">Duell verlassen</button>
+  </div>
+</section>
 
 <dialog id="dlg-meta">
   <form method="dialog" id="form-meta" autocomplete="off">
@@ -81,6 +162,8 @@
 </dialog>
 
 <div class="toast" id="toast" role="status" hidden></div>
+<script src="vendor/peerjs.min.js"></script>
 <script src="app.js"></script>
+<script src="duel.js"></script>
 </body>
 </html>

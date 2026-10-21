@@ -8,6 +8,8 @@ Alle deine Lernquizze in einer App. Quizze werden auf deinem Computer gespeicher
 - **Offline lernen:** Heruntergeladene Quizze liegen auf deinem Computer und laufen ohne Internet. Die vier Quizze unten sind schon beim ersten Start dabei.
 - **Gemeinsame Sammlung:** Unter *Entdecken* stehen alle freigegebenen Quizze aus diesem Repository. Neue Versionen erkennt QuizDesk automatisch.
 - **Eigene Quizze:** Jede Quiz-Datei (.html), z. B. eins, das du mit Claude erstellt hast, lässt sich hinzufügen, exportieren und für alle einreichen.
+- **Duelle:** Live gegeneinander über das Internet mit einem Raum-Code, oder als Herausforderung, die jemand später spielt.
+- **Bleibt aktuell:** QuizDesk meldet, wenn eine neue Version da ist.
 - **Sicher:** Jedes Quiz läuft in einem eigenen, abgeschotteten Fenster.
 - **Für Windows, macOS und Linux**, kostenlos und Open Source (GPL-3.0).
 
@@ -76,6 +78,15 @@ Die App ist nicht von Microsoft oder Apple signiert:
 - **Meine Quizze:** alles, was auf deinem Computer gespeichert ist. Starten, exportieren (als .html-Datei zum Weitergeben) oder entfernen.
 - **Entdecken:** die gemeinsame Sammlung aus diesem Repository (`quizzes/`). Ein Klick auf *Herunterladen*, und das Quiz ist offline verfügbar. Gibt es eine neue Version, zeigt QuizDesk *Update laden* an.
 - **+ Quiz aus Datei:** eine Quiz-Datei (.html) hinzufügen, z. B. ein Quiz, das du mit Claude erstellt hast.
+
+## Duelle
+
+Im Tab **Duell** Namen eingeben, Quiz, Anzahl Fragen und Zeit pro Frage wählen.
+
+- **Live-Duell:** *Duell erstellen* zeigt einen Code wie `K7P2Q`. Dein Gegner tippt ihn bei *Beitreten* ein, du klickst *Duell starten*. Beide bekommen dieselben Fragen gleichzeitig; richtig und schnell gibt bis zu 1000 Punkte. Danach ist eine Revanche möglich. Beide brauchen Internet.
+- **Herausforderung:** *Runde spielen*, danach den Code (beginnt mit `QD-`) kopieren und schicken, z. B. per Teams. Wer ihn bei *Herausforderung annehmen* einfügt, spielt genau dieselben Fragen und sieht bei jeder Frage, wie viele Punkte du hattest.
+
+Duelle gibt es für alle vier Quizze oben. Die Fragen dafür stehen in `quizzes/<id>.duel.json` (erzeugt mit `npx electron scripts/build-duel.js`). Live-Duelle verbinden die beiden Computer direkt über den kostenlosen PeerJS-Dienst; es gibt kein Konto und es werden keine Daten gespeichert.
 
 ## Eigenes Quiz teilen
 

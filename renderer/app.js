@@ -72,7 +72,8 @@ function renderMine() {
     const remote = catalog && catalog.find(x => x.id === q.id);
     const act = el('div', 'actions');
     act.append(button('Starten', 'primary', () => api.open(q.id)));
-    if (q.source === 'catalog' && remote && remote.sha256 && remote.sha256 !== q.sha256) {
+    if (q.duelSha) c.insertBefore(el('span', 'meta', '⚔ Duell möglich'), c.querySelector('.desc'));
+    if (q.source === 'catalog' && outdated(q, remote)) {
       c.insertBefore(el('span', 'badge', 'Neue Version verfügbar'), c.querySelector('.desc'));
       const up = button('Update laden', 'small', () => busy(up, 'Lädt…', async () => { library = await api.download(q.id); renderAll(); toast('Aktualisiert'); }));
       act.append(up);
@@ -109,7 +110,8 @@ function renderFind() {
     const c = card(q);
     const mine = library.find(x => x.id === q.id);
     const act = el('div', 'actions');
-    if (mine && mine.sha256 === q.sha256) {
+    if (q.duel) c.insertBefore(el('span', 'meta', '⚔ Duell möglich'), c.querySelector('.desc'));
+    if (mine && !outdated(mine, q)) {
       act.append(el('span', 'done', '✓ Geladen'), button('Starten', 'small', () => api.open(q.id)));
     } else {
       const b = button(mine ? 'Update laden' : 'Herunterladen', 'primary', () =>
@@ -131,12 +133,15 @@ async function loadCatalog() {
 }
 
 function showTab(which) {
-  const mine = which === 'mine';
-  $('tab-mine').setAttribute('aria-selected', String(mine));
-  $('tab-find').setAttribute('aria-selected', String(!mine));
-  $('view-mine').hidden = !mine;
-  $('view-find').hidden = mine;
+  for (const t of ['mine', 'find', 'duel']) {
+    $('tab-' + t).setAttribute('aria-selected', String(t === which));
+    $('view-' + t).hidden = t !== which;
+  }
+  document.dispatchEvent(new CustomEvent('qd:tab', { detail: which }));
 }
+
+// A catalog quiz needs an update when the quiz or its duel questions changed online.
+const outdated = (mine, remote) => remote && ((remote.sha256 && remote.sha256 !== mine.sha256) || (remote.duelSha256 && remote.duelSha256 !== mine.duelSha));
 
 function openMeta(mode, q) {
   metaMode = mode;
@@ -182,10 +187,17 @@ $('btn-refresh').onclick = loadCatalog;
 $('btn-repo').onclick = () => api.openRepo();
 $('tab-mine').onclick = () => showTab('mine');
 $('tab-find').onclick = () => { showTab('find'); if (catalog === false) loadCatalog(); };
+$('tab-duel').onclick = () => showTab('duel');
+$('btn-update').onclick = () => api.openRelease();
 $('q').addEventListener('input', e => { query = e.target.value.trim().toLowerCase(); renderMine(); });
 
 (async () => {
   library = await api.library();
   renderAll();
   loadCatalog();
+  const latest = await api.updateCheck();
+  if (latest) {
+    $('update-text').textContent = `QuizDesk ${latest} ist da (du hast ${await api.version()}).`;
+    $('update').hidden = false;
+  }
 })();

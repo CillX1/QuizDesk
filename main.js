@@ -1,6 +1,6 @@
 // QuizDesk: a library of study quizzes (single HTML files) that work offline,
 // plus a shared catalog in the GitHub repo that everyone can download from.
-const { app, BrowserWindow, ipcMain, dialog, shell, protocol, session, net, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, protocol, session, net, Menu, clipboard } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -22,6 +22,20 @@ const sha256 = buf => crypto.createHash('sha256').update(buf).digest('hex');
 const looksLikeQuiz = buf => buf.length > 0 && buf.length <= MAX_BYTES && /<(!doctype html|html|body|script)/i.test(buf.toString('utf8', 0, Math.min(buf.length, 20000)));
 const titleOf = html => ((/<title>([^<]{1,120})<\/title>/i.exec(html) || [])[1] || '').trim();
 const quizFile = id => path.join(quizDir, id + '.html');
+const duelFile = id => path.join(quizDir, id + '.duel.json');
+const builtinDir = () => app.isPackaged ? path.join(process.resourcesPath, 'quizzes') : path.join(__dirname, 'quizzes');
+
+// A duel pool is [{t, q, code?, a, w[]}]: one right answer, at least three wrong ones.
+function readPool(buf) {
+  const data = JSON.parse(buf.toString('utf8'));
+  const s = (v, max) => typeof v === 'string' ? v.slice(0, max) : '';
+  const questions = (data.questions || []).map(x => ({
+    t: s(x.t, 60), q: s(x.q, 400), code: s(x.code, 600), a: s(x.a, 200),
+    w: Array.isArray(x.w) ? x.w.map(y => s(y, 200)).filter(Boolean).slice(0, 6) : [],
+  })).filter(x => x.q && x.a && x.w.length >= 3);
+  if (questions.length < 5) throw new Error('Zu wenige Duell-Fragen.');
+  return questions;
+}
 
 function slug(text) {
   const base = String(text).toLowerCase()
@@ -47,17 +61,29 @@ function saveLibrary() { fs.writeFileSync(libFile, JSON.stringify(library, null,
 
 function loadLibrary() {
   fs.mkdirSync(quizDir, { recursive: true });
-  try { library = JSON.parse(fs.readFileSync(libFile, 'utf8')); return; } catch { library = []; }
-  // First start: put the quizzes that ship with the app into the library, so it works offline right away.
-  const builtinDir = app.isPackaged ? path.join(process.resourcesPath, 'quizzes') : path.join(__dirname, 'quizzes');
-  try {
-    const bundled = JSON.parse(fs.readFileSync(path.join(builtinDir, 'catalog.json'), 'utf8')).quizzes;
-    for (const q of bundled) {
-      const buf = fs.readFileSync(path.join(builtinDir, q.file));
-      fs.writeFileSync(quizFile(q.id), buf);
-      library.push({ id: q.id, ...clean(q), source: 'catalog', sha256: sha256(buf) });
-    }
-  } catch (e) { console.error('Could not load bundled quizzes:', e); }
+  let firstRun = false;
+  try { library = JSON.parse(fs.readFileSync(libFile, 'utf8')); } catch { library = []; firstRun = true; }
+  let bundled = [];
+  try { bundled = JSON.parse(fs.readFileSync(path.join(builtinDir(), 'catalog.json'), 'utf8')).quizzes; }
+  catch (e) { console.error('Could not load bundled quizzes:', e); }
+  for (const q of bundled) {
+    try {
+      // First start: put the quizzes that ship with the app into the library, so it works offline right away.
+      if (firstRun) {
+        const buf = fs.readFileSync(path.join(builtinDir(), q.file));
+        fs.writeFileSync(quizFile(q.id), buf);
+        library.push({ id: q.id, ...clean(q), source: 'catalog', sha256: sha256(buf) });
+      }
+      // Also give duel questions to quizzes that came without them (e.g. installed by an older version).
+      const mine = library.find(x => x.id === q.id);
+      if (q.duel && mine && mine.sha256 === q.sha256 && !mine.duelSha) {
+        const buf = fs.readFileSync(path.join(builtinDir(), q.duel));
+        readPool(buf);
+        fs.writeFileSync(duelFile(q.id), buf);
+        mine.duelSha = sha256(buf);
+      }
+    } catch (e) { console.error('Bundled quiz', q.id, e); }
+  }
   saveLibrary();
 }
 
@@ -67,7 +93,10 @@ async function fetchCatalog() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     catalog = (data.quizzes || []).filter(q => /^[a-z0-9-]{1,48}$/.test(q.id) && /^[a-z0-9-]+\.html$/.test(q.file))
-      .map(q => ({ id: q.id, file: q.file, sha256: q.sha256, added: q.added, ...clean(q) }));
+      .map(q => ({
+        id: q.id, file: q.file, sha256: q.sha256, added: q.added, ...clean(q),
+        duel: /^[a-z0-9-]+\.duel\.json$/.test(q.duel || '') ? q.duel : null, duelSha256: q.duelSha256 || null,
+      }));
     return { ok: true, quizzes: catalog };
   } catch (e) {
     return { ok: false, error: String(e.message || e) };
@@ -82,8 +111,17 @@ async function downloadQuiz(id) {
   const buf = Buffer.from(await res.arrayBuffer());
   if (!looksLikeQuiz(buf)) throw new Error('Die Datei ist kein gültiges Quiz.');
   if (entry.sha256 && sha256(buf) !== entry.sha256) throw new Error('Die Datei ist beschädigt angekommen. Versuch es nochmal.');
+  let duelBuf = null;
+  if (entry.duel) {
+    const r = await net.fetch(RAW + entry.duel, { cache: 'no-store', signal: AbortSignal.timeout(30000) });
+    if (!r.ok) throw new Error('Duell-Fragen konnten nicht geladen werden (HTTP ' + r.status + ').');
+    duelBuf = Buffer.from(await r.arrayBuffer());
+    if (entry.duelSha256 && sha256(duelBuf) !== entry.duelSha256) throw new Error('Die Duell-Fragen sind beschädigt angekommen. Versuch es nochmal.');
+    readPool(duelBuf);
+  }
   fs.writeFileSync(quizFile(id), buf);
-  const item = { id, ...clean(entry), source: 'catalog', sha256: sha256(buf) };
+  if (duelBuf) fs.writeFileSync(duelFile(id), duelBuf);
+  const item = { id, ...clean(entry), source: 'catalog', sha256: sha256(buf), duelSha: duelBuf ? sha256(duelBuf) : undefined };
   const i = library.findIndex(q => q.id === id);
   if (i >= 0) library[i] = item; else library.push(item);
   saveLibrary();
@@ -132,6 +170,7 @@ function registerIpc() {
   ipcMain.handle('remove', (e, id) => {
     library = library.filter(q => q.id !== id);
     try { fs.unlinkSync(quizFile(String(id))); } catch {}
+    try { fs.unlinkSync(duelFile(String(id))); } catch {}
     saveLibrary();
     return library;
   });
@@ -196,6 +235,25 @@ function registerIpc() {
   });
 
   ipcMain.handle('open-repo', () => shell.openExternal(`https://github.com/${REPO}`));
+  ipcMain.handle('open-release', () => shell.openExternal(`https://github.com/${REPO}/releases/latest`));
+  ipcMain.handle('version', () => app.getVersion());
+  ipcMain.handle('copy', (e, text) => { clipboard.writeText(String(text).slice(0, 5000)); return true; });
+
+  ipcMain.handle('duel-pool', (e, id) => {
+    const q = library.find(x => x.id === id);
+    if (!q || !q.duelSha) throw new Error('Für dieses Quiz gibt es keine Duell-Fragen.');
+    return { id: q.id, title: q.title, sha: q.duelSha, questions: readPool(fs.readFileSync(duelFile(q.id))) };
+  });
+
+  ipcMain.handle('update-check', async () => {
+    try {
+      const res = await net.fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { signal: AbortSignal.timeout(8000), headers: { accept: 'application/vnd.github+json' } });
+      if (!res.ok) return null;
+      const latest = String((await res.json()).tag_name || '').replace(/^v/, '');
+      const newer = (a, b) => { const x = a.split('.').map(Number), y = b.split('.').map(Number); for (let i = 0; i < 3; i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return false; };
+      return /^\d+\.\d+\.\d+$/.test(latest) && newer(latest, app.getVersion()) ? latest : null;
+    } catch { return null; }
+  });
 }
 
 app.on('second-instance', () => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } });

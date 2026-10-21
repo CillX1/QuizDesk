@@ -14,4 +14,9 @@ contextBridge.exposeInMainWorld('quizdesk', {
   exportQuiz: call('export'),
   submit: call('submit'),
   openRepo: call('open-repo'),
+  openRelease: call('open-release'),
+  version: call('version'),
+  duelPool: call('duel-pool'),
+  updateCheck: call('update-check'),
+  copy: call('copy'),
 });
